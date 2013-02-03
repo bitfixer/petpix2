@@ -23,6 +23,49 @@ int main(void)
             buffer[i] = receiveByte();
         }
         
+        unsigned char calib_start = 0;
+        for (i = 0; i < 1000; i++)
+        {
+            if (calib_start == 0)
+            {
+                if (buffer[i] == 0xff)
+                {
+                    calib_start = 1;
+                }
+            }
+            else if (calib_start == 1)
+            {
+                // wait for 0 value
+                if (buffer[i] == 0x00)
+                {
+                    calib_start = 2;
+                }
+            }
+            
+            if (calib_start == 2)
+            {
+                //if (i < 100)
+                //{
+                    transmitHex(CHAR, buffer[i]);
+                    transmitString(" ");
+                    transmitHex(INT, i);
+                    
+                    if (i > 0)
+                    {
+                        if (buffer[i] != buffer[i-1]+1)
+                        {
+                            transmitString(" **");
+                        }
+                    }
+                    
+                    transmitString("\r\n");
+                    _delay_loop_2(65535);
+                //}
+            }
+            
+            
+        }
+        
         /*
         int res;
         int start_offset = -1;
@@ -58,6 +101,7 @@ int main(void)
         }
         */
         
+        /*
         for (i = 0; i < 100; i++)
         {
             transmitHex(CHAR, buffer[i]);
@@ -75,5 +119,6 @@ int main(void)
             transmitString("\r\n");
             _delay_loop_2(65535);
         }
+        */
     }
 }
