@@ -12,113 +12,93 @@
 
 int main(void)
 {
+    // set CA1 output
+    DDRA = 0x01;
+    // set low
+    PORTA = 0x00;
     uart0_init(25);
     unsigned char byte;
     unsigned char buffer[1000];
     int i;
     while(1)
     {
+        // set CA1 line low
+        PORTA = 0x00;
+        byte = 0x00;
+        transmitString("waiting for buffer bytes:");
+        
+        
+        // skip over buffer bytes
+        while (byte != 0xff)
+        {
+            byte = receiveByte();
+        }
+        
+        while (byte != 0x00)
+        {
+            byte = receiveByte();
+        }
+
         for (i = 0; i < 1000; i++)
         {
             buffer[i] = receiveByte();
         }
         
-        unsigned char calib_start = 0;
-        for (i = 0; i < 1000; i++)
+        transmitString("got 1000 bytes\r\n");
+        
+        int j = 1000;
+        unsigned char cv, currentVal;
+        
+        // done getting data
+        DDRC = 0xFF;
+        PORTA = 0x01;
+        
+        // now wait for CB2 to go low
+        cv = PINA;
+        cv = cv & 0x02;
+        while (cv != 0x00)
         {
-            if (calib_start == 0)
-            {
-                if (buffer[i] == 0xff)
-                {
-                    calib_start = 1;
-                }
-            }
-            else if (calib_start == 1)
-            {
-                // wait for 0 value
-                if (buffer[i] == 0x00)
-                {
-                    calib_start = 2;
-                }
-            }
-            
-            if (calib_start == 2)
-            {
-                //if (i < 100)
-                //{
-                    transmitHex(CHAR, buffer[i]);
-                    transmitString(" ");
-                    transmitHex(INT, i);
-                    
-                    if (i > 0)
-                    {
-                        if (buffer[i] != buffer[i-1]+1)
-                        {
-                            transmitString(" **");
-                        }
-                    }
-                    
-                    transmitString("\r\n");
-                    _delay_loop_2(65535);
-                //}
-            }
-            
-            
+            cv = PINA;
+            cv = cv & 0x02;
         }
         
-        /*
-        int res;
-        int start_offset = -1;
-        for (i = 0; i < 1000; i++)
-        {
-            if (start_offset == -1)
-            {
-                if (buffer[i] == 0x00)
-                {
-                    start_offset = i;
-                    transmitString("offset ");
-                    transmitHex(INT, start_offset);
-                    transmitString("\r\n");
-                }
-            }
-            
-            if (start_offset >= 0)
-            {
-                res = (i-start_offset) % 256;
-
-                if (res != buffer[i])
-                {
-                    transmitString("error:");
-                    transmitHex(INT, i);
-                    transmitByte(' ');
-                    transmitHex(CHAR, buffer[i]);
-                    transmitByte(' ');
-                    transmitHex(INT, res);
-                    transmitString("\r\n");
-                }
-            }
-            
-        }
-        */
+        //transmitString("got CB2 low");
         
-        /*
-        for (i = 0; i < 100; i++)
+        // CB2 is now low
+        currentVal = cv;
+        for (i = 0; i < j; i++)
         {
-            transmitHex(CHAR, buffer[i]);
-            transmitString(" ");
-            transmitHex(INT, i);
+            // output the current byte
+            PORTC = buffer[i];
             
-            if (i > 0)
+            // wait for output to toggle
+            cv = PINA;
+            cv = cv & 0x02;
+            while (cv == 0x00)
             {
-                if (buffer[i] != buffer[i-1]+1)
+                cv = PINA;
+                cv = cv & 0x02;
+            }
+            
+            i++;
+            PORTC = buffer[i];
+            
+            //transmitHex(INT, i);
+            
+            if (i < j-1)
+            {
+                cv = PINA;
+                cv = cv & 0x02;
+                while (cv != 0x00)
                 {
-                    transmitString(" **");
+                    cv = PINA;
+                    cv = cv & 0x02;
                 }
             }
             
-            transmitString("\r\n");
-            _delay_loop_2(65535);
+            // the value has toggled, send next byte
         }
-        */
+        
+        transmitString("done sending image.");
     }
 }
