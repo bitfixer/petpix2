@@ -5,7 +5,9 @@
  *  Author: Michael Hill
  */ 
 
-
+//#include "huffman.h"
+#include "lz.h"
+//#include "rle.h"
 #include "UART_routines.h"
 #include <avr/io.h>
 #include <util/delay.h>
@@ -17,7 +19,10 @@ int main(void)
     // set low
     PORTA = 0x00;
     uart0_init(25);
+    
     unsigned char byte;
+    unsigned int numBytes;
+    unsigned char compressedBuffer[1100];
     unsigned char buffer[1000];
     int i;
     while(1)
@@ -25,7 +30,7 @@ int main(void)
         // set CA1 line low
         PORTA = 0x00;
         byte = 0x00;
-        transmitString("waiting for buffer bytes:");
+        //transmitString("waiting for buffer bytes:");
         
         
         // skip over buffer bytes
@@ -38,13 +43,40 @@ int main(void)
         {
             byte = receiveByte();
         }
+        
+        buffer[0] = receiveByte();
+        buffer[1] = receiveByte();
+        
+        numBytes = buffer[0];
+        numBytes = numBytes << 8;
+        numBytes += buffer[1];
+        
+        //transmitHex(INT, numBytes);
 
-        for (i = 0; i < 1000; i++)
+        for (i = 0; i < numBytes; i++)
         {
-            buffer[i] = receiveByte();
+            compressedBuffer[i] = receiveByte();
         }
         
-        transmitString("got 1000 bytes\r\n");
+        //transmitString("got bytes\r\n");
+        transmitHex(INT, numBytes);
+        //Huffman_Uncompress(compressedBuffer, buffer, numBytes, 1000);
+        //RLE_Uncompress(compressedBuffer, buffer, numBytes);
+        LZ_Uncompress(compressedBuffer, buffer, numBytes);
+        /*
+        int cc = 0;
+        for (int i = 0; i < 25; i++)
+        {
+            for (int j = 0; j < 40; j++)
+            {
+                buffer[cc] = '0'+j;
+                cc++;
+            }
+        }
+        */
+        
+        //transmitString("uncompressed buffer\r\n");
+        
         
         int j = 1000;
         unsigned char cv, currentVal;
@@ -99,6 +131,6 @@ int main(void)
             // the value has toggled, send next byte
         }
         
-        transmitString("done sending image.");
+        //transmitString("done sending image.");
     }
 }
