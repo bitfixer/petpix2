@@ -12,6 +12,8 @@
 #include <avr/io.h>
 #include <util/delay.h>
 
+//#define USE_COMPRESSED_BUFFER 1
+
 int main(void)
 {
     // set CA1 output
@@ -22,7 +24,11 @@ int main(void)
     
     unsigned char byte;
     unsigned int numBytes;
+    
+#ifdef USE_COMPRESSED_BUFFER
     unsigned char compressedBuffer[1100];
+#endif
+    
     unsigned char buffer[1000];
     int i;
     while(1)
@@ -30,7 +36,7 @@ int main(void)
         // set CA1 line low
         PORTA = 0x00;
         byte = 0x00;
-        //transmitString("waiting for buffer bytes:");
+        transmitString("waiting for buffer bytes:");
         
         
         // skip over buffer bytes
@@ -44,6 +50,7 @@ int main(void)
             byte = receiveByte();
         }
         
+#ifdef USE_COMPRESSED_BUFFER
         buffer[0] = receiveByte();
         buffer[1] = receiveByte();
         
@@ -58,11 +65,17 @@ int main(void)
             compressedBuffer[i] = receiveByte();
         }
         
-        //transmitString("got bytes\r\n");
         transmitHex(INT, numBytes);
         //Huffman_Uncompress(compressedBuffer, buffer, numBytes, 1000);
         //RLE_Uncompress(compressedBuffer, buffer, numBytes);
         LZ_Uncompress(compressedBuffer, buffer, numBytes);
+#else
+        numBytes = 1000;
+        for (i = 0; i < numBytes; i++)
+        {
+            buffer[i] = receiveByte();
+        }
+#endif
         /*
         int cc = 0;
         for (int i = 0; i < 25; i++)
@@ -74,9 +87,14 @@ int main(void)
             }
         }
         */
-        
-        //transmitString("uncompressed buffer\r\n");
-        
+		/*
+		for (int i = 0; i < 100; i++)
+		{
+			transmitHex(CHAR, buffer[i]);
+		}
+		*/
+		
+        transmitString("uncompressed buffer\r\n");
         
         int j = 1000;
         unsigned char cv, currentVal;
